@@ -1,0 +1,30 @@
+bind c screen 1
+bind ^c screen 1
+bind 0 select 10
+screen 1
+
+term screen-256color
+
+# Automatically detach on hangup
+autodetach on
+
+# Don't display the copyright page
+startup_message off
+
+# Disable annoying bells
+bell_msg ''
+vbell off
+
+# Enable utf8
+defutf8 on
+
+# Scrolling in xterm
+termcapinfo xterm* ti@:te@
+
+# Change default scrollback value for new windows
+defscrollback 99000
+
+# Statusline
+hardstatus on
+hardstatus alwayslastline
+hardstatus string "%{by}[ %S ]( %H ) %Y-%m-%d %c "
