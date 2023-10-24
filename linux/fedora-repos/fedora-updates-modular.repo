@@ -1,7 +1,7 @@
 [updates-modular]
 name=Fedora Modular $releasever - $basearch - Updates
-#baseurl=http://download.example/pub/fedora/linux/updates/$releasever/Modular/$basearch/
-metalink=https://mirrors.fedoraproject.org/metalink?repo=updates-released-modular-f$releasever&arch=$basearch
+baseurl=http://fedora.c3sl.ufpr.br/linux/updates/$releasever/Modular/$basearch/
+#metalink=https://mirrors.fedoraproject.org/metalink?repo=updates-released-modular-f$releasever&arch=$basearch
 enabled=1
 countme=1
 repo_gpgcheck=0
@@ -13,8 +13,8 @@ skip_if_unavailable=False
 
 [updates-modular-debuginfo]
 name=Fedora Modular $releasever - $basearch - Updates - Debug
-#baseurl=http://download.example/pub/fedora/linux/updates/$releasever/Modular/$basearch/debug/
-metalink=https://mirrors.fedoraproject.org/metalink?repo=updates-released-modular-debug-f$releasever&arch=$basearch
+baseurl=http://fedora.c3sl.ufpr.br/linux/updates/$releasever/Modular/$basearch/debug/
+#metalink=https://mirrors.fedoraproject.org/metalink?repo=updates-released-modular-debug-f$releasever&arch=$basearch
 enabled=0
 repo_gpgcheck=0
 type=rpm
@@ -25,8 +25,8 @@ skip_if_unavailable=False
 
 [updates-modular-source]
 name=Fedora Modular $releasever - Updates Source
-#baseurl=http://download.example/pub/fedora/linux/updates/$releasever/Modular/SRPMS/
-metalink=https://mirrors.fedoraproject.org/metalink?repo=updates-released-modular-source-f$releasever&arch=$basearch
+baseurl=http://fedora.c3sl.ufpr.br/linux/updates/$releasever/Modular/SRPMS/
+#metalink=https://mirrors.fedoraproject.org/metalink?repo=updates-released-modular-source-f$releasever&arch=$basearch
 enabled=0
 repo_gpgcheck=0
 type=rpm
