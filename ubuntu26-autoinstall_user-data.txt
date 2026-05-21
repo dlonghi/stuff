@@ -1,0 +1,176 @@
+#cloud-config
+autoinstall:
+  # GRUB: --- ip=dhcp autoinstall ds=nocloud-net\;s=http://192.168.1.16/
+  version: 1
+  variant: minimized
+  timezone: America/Sao_Paulo
+  source:
+    #id: ubuntu-server-minimal
+    search_drivers: true
+  identity:
+    hostname: edge-ubuntu
+    username: super
+    realname: "Super User"
+    password: "$6$FNuo/tfEV..FZ6IN$poQi8/Z1TCvddvxjUz/Om7rTC7q8b3GXFOKRRaSTvN2IV4qsBRus7v7wlYrgkswZ/kY.XtHajb4rTXImWvr3g0"
+
+  ssh:
+    install-server: true
+    allow-pw: true
+    authorized-keys:
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGXZvFjSQtDV2qNguamQgA9S1CBycP7V4oSbbgDBdEyc longhidaniel@gmail.com"
+
+  #storage:
+  #  version: 1
+  #  layout:
+  #    name: lvm
+  #    password: fde123
+  #    sizing-policy: all
+
+  storage:
+    version: 1
+    config:
+      # 1. Define physical target disk and apply GPT layout
+      - id: disk-main
+        type: disk
+        match:
+          smallest: true
+        ptable: gpt
+        wipe: superblock-recursive
+
+      # 2. EFI System Partition (FAT32) - Unencrypted
+      - id: partition-efi
+        type: partition
+        device: disk-main
+        size: 1G
+        number: 1
+        flag: boot
+        grub_device: true
+      - id: format-efi
+        type: format
+        fstype: fat32
+        volume: partition-efi
+      - id: mount-efi
+        type: mount
+        device: format-efi
+        path: /boot/efi
+
+      # 3. Boot Partition (Ext4) - Unencrypted for Secure Boot handoff
+      - id: partition-boot
+        type: partition
+        device: disk-main
+        size: 2G
+        number: 2
+      - id: format-boot
+        type: format
+        fstype: ext4
+        volume: partition-boot
+      - id: mount-boot
+        type: mount
+        device: format-boot
+        path: /boot
+
+      # 4. Physical Base Partition for Encryption (Consumes remaining space)
+      - id: partition-crypto-base
+        type: partition
+        device: disk-main
+        size: -1
+        number: 3
+
+      # 5. LUKS/dm_crypt Encryption Layer over Partition 3
+      - id: dm-crypt-container
+        type: dm_crypt
+        dm_name: crypt_root
+        volume: partition-crypto-base
+        key: "fde123"
+
+      # 6. LVM Volume Group mapped completely inside the encrypted container
+      - id: volume-group-main
+        type: lvm_volgroup
+        name: vg1
+        devices:
+          - dm-crypt-container
+
+      # 7. /var/log Logical Volume (1GB XFS)
+      - id: lv-log
+        type: lvm_partition
+        name: lv-log
+        volgroup: volume-group-main
+        size: 1G
+      - id: format-log
+        type: format
+        fstype: xfs
+        volume: lv-log
+      - id: mount-log
+        type: mount
+        device: format-log
+        path: /var/log
+
+      # 8. Root (/) Logical Volume (Remaining Space XFS)
+      - id: lv-root
+        type: lvm_partition
+        name: lv-root
+        volgroup: volume-group-main
+        size: -1
+      - id: format-root
+        type: format
+        fstype: xfs
+        volume: lv-root
+      - id: mount-root
+        type: mount
+        device: format-root
+        path: /
+
+  apt:
+    package_upgrade: true
+
+  packages:
+    - curl
+    - git
+    - vim
+    - nano
+    - qemu-guest-agent
+    - tmux
+    - bash-completion
+    - traceroute
+    - tcpdump
+    - nmap
+    - htop
+    - screen
+    - tpm2-tools
+
+  late-commands:
+    - curtin in-target -- sed -i 's/#SystemMaxUse.*/SystemMaxUse=1G/' /etc/systemd/journald.conf
+    - curtin in-target -- sed -i 's/#RuntimeMaxUse.*/RuntimeMaxUse=200M/' /etc/systemd/journald.conf
+
+    - curtin in-target -- echo "colorscheme desert" >> /etc/vim/vimrc
+
+    - curtin in-target -- rm -f /etc/chrony/sources.d/ubuntu-ntp-pools.sources
+    - curtin in-target -- bash -c 'echo -e "server time.cloudflare.com iburst prefer\nserver time.google.com iburst" > /etc/chrony/conf.d/custom-ntp-servers.conf'
+
+    - curtin in-target -- sh -c "echo '%sudo ALL=(ALL:ALL) NOPASSWD:ALL' > /etc/sudoers.d/sudo"
+    - curtin in-target -- chmod 440 /etc/sudoers.d/sudo
+
+### post install
+
+#apt update
+#apt purge snapd
+#apt autoremove
+#apt upgrade -y
+
+### tpm unlock
+#lsblk
+#systemd-cryptenroll /dev/sda3 (returned: 0 password)
+## change the current passphrase (fde123)
+#cryptsetup luksChangeKey /dev/sda3 --key-slot 0
+#systemd-cryptenroll /dev/sda3 (returned: 0 password)
+## config the auto unlock
+#systemd-cryptenroll --tpm2-device=/dev/tpm0 --tpm2-pcrs=7 /dev/sda3
+# output: New TPM2 token enrolled as key slot 1.
+#systemd-cryptenroll /dev/sda3 (returned: 0 password, 1 tpm2)
+#systemd-cryptenroll --recovery-key /dev/sda3 > /root/recovery-key.txt
+# output: New recovery key enrolled as key slot 2.
+#chmod 600 /root/recovery-key.txt
+#systemd-cryptenroll /dev/sda3 (returned: 0 password, 1 tpm2, 2 recovery)
+#cp /etc/crypttab /etc/crypttab_backup_original
+#sed -i 's/none/tpm2-device=\/dev\/tpm0/' /etc/crypttab
+#update-initramfs -u -k all
